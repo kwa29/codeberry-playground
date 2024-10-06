@@ -1,158 +1,199 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { startupIdeas } from './data/startupIdeas';
+import { useState, useCallback } from 'react';
+import Image from 'next/image';
 
-interface StartupIdea {
-  id: number;
-  title: string;
-  description: string;
-  keywords: string[];
+interface ValidatedIdea {
+  idea: string;
+  swot: {
+    strengths: string[];
+    weaknesses: string[];
+    opportunities: string[];
+    threats: string[];
+  };
+  criticalQuestions: string[];
+  actionPlan: string[];
 }
 
 export default function Home() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<StartupIdea[]>([]);
-  const [aiIdea, setAiIdea] = useState<string | null>(null);
+  const [targetMarket, setTargetMarket] = useState('');
+  const [validatedIdea, setValidatedIdea] = useState<ValidatedIdea | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
-  const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  const handleSearch = useCallback(() => {
+  const generateAndValidateIdea = async () => {
     setIsLoading(true);
     setError(null);
-    setAiIdea(null);
+    setProgress(0);
     try {
-      console.log('Searching for:', query);
-      const searchResults = startupIdeas.filter(idea =>
-        idea.keywords.some(keyword => keyword.toLowerCase().includes(query.toLowerCase())) ||
-        idea.title.toLowerCase().includes(query.toLowerCase()) ||
-        idea.description.toLowerCase().includes(query.toLowerCase())
-      );
-      console.log('Search results:', searchResults);
-      setResults(searchResults);
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('An error occurred while searching. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [query]);
-
-  const generateAIIdea = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
+      setProgress(25);
       const response = await fetch('/api/generate-idea', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, targetMarket }),
       });
+      setProgress(50);
       const data = await response.json();
       if (response.status !== 200) {
         throw data.error || new Error(`Request failed with status ${response.status}`);
       }
-      setAiIdea(data.result);
+      setProgress(75);
+      setValidatedIdea(data);
+      setProgress(100);
     } catch (error) {
       console.error('Error:', error);
-      setError('An error occurred while generating an AI idea. Please try again.');
+      setError('An error occurred while generating and validating the idea. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const debouncedSearch = useCallback(debounce(handleSearch, 300), [handleSearch]);
-
-  useEffect(() => {
-    if (query) {
-      debouncedSearch();
-    } else {
-      setResults([]);
-    }
-  }, [query, debouncedSearch]);
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    generateAIIdea();
-  };
-
-  const handleClearSearch = () => {
-    setQuery('');
-    setResults([]);
-  };
-
-  const getRelatedKeywords = (idea: StartupIdea) => {
-    return idea.keywords.filter(keyword => !keyword.toLowerCase().includes(query.toLowerCase()));
+    generateAndValidateIdea();
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-8">Startup Idea Finder</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-100">
+      <h1 className="text-4xl font-bold mb-8 text-center">Startup Idea Validator 🚀</h1>
       
-      <form onSubmit={handleSubmit} className="w-full max-w-md mb-8">
-        <div className="flex items-center">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter keywords for your startup idea"
-            className="flex-grow p-2 border border-gray-300 rounded-l"
-          />
-          {query && (
+      {!validatedIdea && (
+        <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mb-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="idea" className="block text-sm font-medium text-gray-700">Your business idea</label>
+              <input
+                id="idea"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Enter your startup idea"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="market" className="block text-sm font-medium text-gray-700">Target market</label>
+              <input
+                id="market"
+                type="text"
+                value={targetMarket}
+                onChange={(e) => setTargetMarket(e.target.value)}
+                placeholder="Describe your target market"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                required
+              />
+            </div>
             <button
-              type="button"
-              onClick={handleClearSearch}
-              className="p-2 bg-gray-200 text-gray-600 hover:bg-gray-300"
+              type="submit"
+              className="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+              disabled={isLoading}
             >
-              Clear
+              {isLoading ? 'Validating...' : 'Validate Idea'}
             </button>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="mt-4 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
-          Generate AI Idea
-        </button>
-      </form>
-
-      {isLoading && <p>Processing your request...</p>}
-      {error && <p className="text-red-500">{error}</p>}
-
-      {aiIdea && (
-        <div className="w-full max-w-md mb-8">
-          <h2 className="text-xl font-semibold mb-4">AI Generated Idea:</h2>
-          <p className="bg-green-100 border border-green-300 rounded p-4">{aiIdea}</p>
+          </form>
         </div>
       )}
 
-      <div className="w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-4">Database Results:</h2>
-        {results.length > 0 ? (
-          <ul className="list-disc pl-5">
-            {results.map((result) => (
-              <li key={result.id} className="mb-4">
-                <strong>{result.title}</strong>
-                <p>{result.description}</p>
-                <p className="text-sm text-gray-600">
-                  Related: {getRelatedKeywords(result).join(', ')}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No results from the database. Try searching for some ideas!</p>
-        )}
-      </div>
+      {isLoading && (
+        <div className="w-full max-w-md mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Validating your idea...</h2>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+            </div>
+            <p className="mt-2 text-sm text-gray-600">This may take up to 20 seconds</p>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {validatedIdea && (
+        <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-3xl font-bold mb-6 text-center">Your startup idea has been assessed! 🔍</h2>
+          <p className="text-center text-gray-600 mb-8">Here's a summary of your startup's potential and actionable steps to move forward.</p>
+          
+          <div className="flex justify-between mb-8">
+            <button onClick={() => setValidatedIdea(null)} className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+              Validate another idea
+            </button>
+            <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+              Share
+            </button>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">SWOT Analysis</h3>
+            <p className="text-gray-600 mb-4">SWOT Analysis is a key tool for evaluating your startup's potential. It reveals your Strengths to leverage, Weaknesses to improve, Opportunities to capture, and Threats to watch out for. This clear, strategic insight is crucial for making informed decisions and guiding your business towards success.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-100 p-4 rounded-md">
+                <h4 className="font-bold text-blue-700 mb-2">Strengths</h4>
+                <ul className="list-disc pl-5">
+                  {validatedIdea.swot.strengths.map((strength, index) => (
+                    <li key={index}>{strength}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-yellow-100 p-4 rounded-md">
+                <h4 className="font-bold text-yellow-700 mb-2">Weaknesses</h4>
+                <ul className="list-disc pl-5">
+                  {validatedIdea.swot.weaknesses.map((weakness, index) => (
+                    <li key={index}>{weakness}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-green-100 p-4 rounded-md">
+                <h4 className="font-bold text-green-700 mb-2">Opportunities</h4>
+                <ul className="list-disc pl-5">
+                  {validatedIdea.swot.opportunities.map((opportunity, index) => (
+                    <li key={index}>{opportunity}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-red-100 p-4 rounded-md">
+                <h4 className="font-bold text-red-700 mb-2">Threats</h4>
+                <ul className="list-disc pl-5">
+                  {validatedIdea.swot.threats.map((threat, index) => (
+                    <li key={index}>{threat}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">Critical Questions</h3>
+            <ul className="list-disc pl-5">
+              {validatedIdea.criticalQuestions.map((question, index) => (
+                <li key={index} className="mb-2">{question}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">Action Plan</h3>
+            <ol className="list-decimal pl-5">
+              {validatedIdea.actionPlan.map((step, index) => (
+                <li key={index} className="mb-2">{step}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="text-center">
+            <a
+              href="#"
+              className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 text-lg font-semibold"
+            >
+              Start Building Your Startup
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
