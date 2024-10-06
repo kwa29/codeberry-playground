@@ -6,12 +6,17 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: Request) {
+  console.log('API route hit'); // Add this line
+
   if (!process.env.OPENAI_API_KEY) {
+    console.error('OpenAI API key not configured'); // Add this line
     return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
   }
 
   try {
     const { query } = await req.json();
+    console.log('Received query:', query); // Add this line
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -23,6 +28,7 @@ export async function POST(req: Request) {
     });
 
     const result = completion.choices[0].message.content;
+    console.log('Generated result:', result); // Add this line
     return NextResponse.json({ result });
   } catch (error: any) {
     console.error('OpenAI API error:', error);
