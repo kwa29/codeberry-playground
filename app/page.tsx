@@ -13,6 +13,10 @@ interface ValidatedIdea {
   };
   criticalQuestions: string[];
   actionPlan: string[];
+  targetMarketStrategies: string[];
+  competition: string[];
+  marketDemandIndicators: string[];
+  frameworks: string[];
 }
 
 export default function Home() {
@@ -176,12 +180,53 @@ export default function Home() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4">Action Plan</h3>
+            <h3 className="text-2xl font-semibold mb-4">📊 5 Ways to Reach Your Target Market</h3>
+            <p className="text-gray-600 mb-4">Strategies to connect with and engage your target audience, crucial for your startup's market penetration.</p>
+            <ol className="list-decimal pl-5">
+              {validatedIdea.targetMarketStrategies.map((strategy, index) => (
+                <li key={index} className="mb-2">{strategy}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">🏆 Competition or Similar Players to Keep in Mind</h3>
+            <p className="text-gray-600 mb-4">Understand your competitive landscape. Knowing your rivals helps in positioning your startup strategically in the market.</p>
+            <ul className="list-disc pl-5">
+              {validatedIdea.competition.map((competitor, index) => (
+                <li key={index} className="mb-2">{competitor}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">🚀 Your ACTION PLAN</h3>
+            <p className="text-gray-600 mb-4">Actionable steps to move your startup idea from concept to reality and bring you closer to 100K MRR🤑.</p>
             <ol className="list-decimal pl-5">
               {validatedIdea.actionPlan.map((step, index) => (
                 <li key={index} className="mb-2">{step}</li>
               ))}
             </ol>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">📈 Market DEMAND INDICATORS</h3>
+            <p className="text-gray-600 mb-4">Key signals that suggest a strong market need for your startup. These indicators can guide your strategy to align with market demand.</p>
+            <ul className="list-disc pl-5">
+              {validatedIdea.marketDemandIndicators.map((indicator, index) => (
+                <li key={index} className="mb-2">{indicator}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">📚 Frameworks to Evaluate</h3>
+            <p className="text-gray-600 mb-4">Strategic frameworks to critically assess and enhance your startup's approach and business model.</p>
+            <ul className="list-disc pl-5">
+              {validatedIdea.frameworks.map((framework, index) => (
+                <li key={index} className="mb-2">{framework}</li>
+              ))}
+            </ul>
           </div>
 
           <div className="text-center">

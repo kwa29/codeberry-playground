@@ -27,10 +27,14 @@ export async function POST(req: Request) {
         2. SWOT analysis (Strengths, Weaknesses, Opportunities, Threats)
         3. 3-5 critical questions to consider
         4. A 5-step action plan
-        Format the response as JSON with keys: idea, swot (containing strengths, weaknesses, opportunities, threats as arrays), criticalQuestions (array), actionPlan (array)` }
+        5. 5 ways to reach the target market
+        6. 3-5 competitors or similar players to keep in mind
+        7. 3-5 market demand indicators
+        8. 3-5 strategic frameworks to evaluate the idea
+        Format the response as JSON with keys: idea, swot (containing strengths, weaknesses, opportunities, threats as arrays), criticalQuestions (array), actionPlan (array), targetMarketStrategies (array), competition (array), marketDemandIndicators (array), frameworks (array)` }
       ],
       temperature: 0.6,
-      max_tokens: 1000,
+      max_tokens: 1500,
     });
 
     const result = JSON.parse(completion.choices[0].message.content || '{}');
