@@ -5,8 +5,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const MAX_CONTENT_LENGTH = 500000; // Further reduced
-const MAX_SUMMARY_LENGTH = 100; // Drastically reduced summary length
+const MAX_CONTENT_LENGTH = 500000;
+const MAX_SUMMARY_LENGTH = 100;
 
 function truncateContent(content: string, maxLength: number): string {
   if (content.length <= maxLength) return content;
@@ -24,6 +24,21 @@ async function summarizePitchDeck(content: string): Promise<string> {
   return truncateContent(completion.choices[0].message.content || '', MAX_SUMMARY_LENGTH * 7);
 }
 
+function normalizeScore(score: number): number {
+  return Math.min(Math.max(score, 0), 10);
+}
+
+interface Weights {
+  tech: number;
+  gtm: number;
+  investmentMemo: number;
+}
+
+function calculateWeightedScore(scores: number[], weights: number[]): number {
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  return scores.reduce((sum, score, index) => sum + score * weights[index], 0) / totalWeight;
+}
+
 export async function POST(req: NextRequest) {
   console.log('API route hit');
   
@@ -32,6 +47,8 @@ export async function POST(req: NextRequest) {
     const query = formData.get('query') as string;
     const targetMarket = formData.get('targetMarket') as string;
     const pitchDeck = formData.get('pitchDeck') as File | null;
+    const startupStage = formData.get('startupStage') as string || 'early';
+    const customWeights = JSON.parse(formData.get('customWeights') as string || '{}') as Partial<Weights>;
 
     let pitchDeckContent = '';
     if (pitchDeck) {
@@ -46,6 +63,7 @@ export async function POST(req: NextRequest) {
       Idea: ${truncateContent(query, 200)}
       Target Market: ${truncateContent(targetMarket, 50)}
       ${pitchDeckContent ? `Pitch Deck: ${pitchDeckContent}` : ''}
+      Startup Stage: ${startupStage}
 
       Provide a concise analysis with:
       1. SWOT (1 each)
@@ -56,8 +74,11 @@ export async function POST(req: NextRequest) {
       6. 2 market demand indicators
       7. 2 relevant frameworks
       8. Investment memo (summary, market opportunity, business model, competitive advantage, financial projections, funding requirements)
-      9. 3 technical due diligence points
-      10. 3 go-to-market due diligence points
+      9. 3 technical due diligence points with scores (0-10)
+      10. 3 go-to-market due diligence points with scores (0-10)
+      11. 6 investment memo quality scores (0-10) for each section of the investment memo
+
+      Use the pitch deck information (if available) to inform your analysis, especially for the due diligence points and scores.
 
       JSON format:
       {
@@ -74,10 +95,6 @@ export async function POST(req: NextRequest) {
         "competition": ["Competitor1", "Competitor2"],
         "marketDemandIndicators": ["Indicator1", "Indicator2"],
         "frameworks": ["Framework1", "Framework2"],
-        "globalScore": 0.0,
-        "confidenceScore": 0.0,
-        "techScore": 0.0,
-        "gtmScore": 0.0,
         "investmentMemo": {
           "summary": "Brief summary",
           "marketOpportunity": "Market opportunity",
@@ -86,9 +103,24 @@ export async function POST(req: NextRequest) {
           "financialProjections": "Financial projections",
           "fundingRequirements": "Funding requirements"
         },
-        "dueDiligenceTech": ["Tech1", "Tech2", "Tech3"],
-        "dueDiligenceGTM": ["GTM1", "GTM2", "GTM3"],
-        "pitchDeckProcessed": true
+        "dueDiligenceTech": [
+          {"point": "Tech1", "score": 0},
+          {"point": "Tech2", "score": 0},
+          {"point": "Tech3", "score": 0}
+        ],
+        "dueDiligenceGTM": [
+          {"point": "GTM1", "score": 0},
+          {"point": "GTM2", "score": 0},
+          {"point": "GTM3", "score": 0}
+        ],
+        "investmentMemoScores": {
+          "summary": 0,
+          "marketOpportunity": 0,
+          "businessModel": 0,
+          "competitiveAdvantage": 0,
+          "financialProjections": 0,
+          "fundingRequirements": 0
+        }
       }
       Keep all responses extremely brief.
     `;
@@ -109,9 +141,51 @@ export async function POST(req: NextRequest) {
 
     const parsedResponse = JSON.parse(response);
     parsedResponse.pitchDeckProcessed = !!pitchDeckContent;
+
+    // Error handling for missing fields
+    if (!parsedResponse.dueDiligenceTech || !parsedResponse.dueDiligenceGTM || !parsedResponse.investmentMemoScores) {
+      throw new Error('Incomplete response from OpenAI API');
+    }
+
+    // Calculate and normalize scores
+    parsedResponse.techScore = normalizeScore(parsedResponse.dueDiligenceTech.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3);
+    parsedResponse.gtmScore = normalizeScore(parsedResponse.dueDiligenceGTM.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3);
+    parsedResponse.confidenceScore = normalizeScore(
+      Object.values(parsedResponse.investmentMemoScores).reduce((sum: number, score: unknown) => {
+        if (typeof score === 'number') {
+          return sum + score;
+        }
+        return sum;
+      }, 0) / 6
+    );
+
+    // Define weights based on startup stage and custom weights
+    let weights: Weights = {
+      tech: 0.33,
+      gtm: 0.33,
+      investmentMemo: 0.34
+    };
+
+    if (startupStage === 'early') {
+      weights = { tech: 0.4, gtm: 0.3, investmentMemo: 0.3 };
+    } else if (startupStage === 'growth') {
+      weights = { tech: 0.3, gtm: 0.4, investmentMemo: 0.3 };
+    } else if (startupStage === 'late') {
+      weights = { tech: 0.2, gtm: 0.3, investmentMemo: 0.5 };
+    }
+
+    // Apply custom weights if provided
+    weights = { ...weights, ...customWeights };
+
+    // Calculate weighted global score
+    parsedResponse.globalScore = normalizeScore(calculateWeightedScore(
+      [parsedResponse.techScore, parsedResponse.gtmScore, parsedResponse.confidenceScore],
+      [weights.tech, weights.gtm, weights.investmentMemo]
+    ));
+
     return NextResponse.json(parsedResponse);
   } catch (error) {
-    console.error('OpenAI API error:', error);
+    console.error('API error:', error);
     return NextResponse.json({ error: 'An error occurred while processing your request.' }, { status: 500 });
   }
 }

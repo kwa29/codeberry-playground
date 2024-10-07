@@ -42,8 +42,8 @@ interface ValidatedIdea {
     financialProjections: string;
     fundingRequirements: string;
   };
-  dueDiligenceTech: string[];
-  dueDiligenceGTM: string[];
+  dueDiligenceTech: { point: string; score: number }[];
+  dueDiligenceGTM: { point: string; score: number }[];
   pitchDeckProcessed: boolean;
   overallSentiment: 'positive' | 'neutral' | 'negative';
   sentimentScores: {
@@ -61,6 +61,16 @@ const defaultInvestmentMemo = {
   financialProjections: "Develop realistic financial projections for the next 3-5 years. Include expected revenue, costs, and potential profitability milestones.",
   fundingRequirements: "Estimate the amount of funding needed to reach key milestones. Break down how the funds will be used across different areas of your startup."
 };
+
+function getScoreColor(score: number): string {
+  if (score <= 3.33) {
+    return 'text-red-500';
+  } else if (score <= 6.66) {
+    return 'text-yellow-500';
+  } else {
+    return 'text-green-500';
+  }
+}
 
 export default function Home() {
   const [query, setQuery] = useState('');
@@ -273,16 +283,11 @@ export default function Home() {
           <p className="text-center text-gray-600 mb-8">Here's a summary of your startup's potential and actionable steps to move forward.</p>
           
           {/* Global Score */}
-          <div className="flex justify-center items-center mb-8">
-            <div className="bg-indigo-600 text-white text-2xl font-bold rounded-full w-24 h-24 flex items-center justify-center">
-              {(() => {
-                const techScore = validatedIdea.techScore ?? 0;
-                const gtmScore = validatedIdea.gtmScore ?? 0;
-                const confidenceScore = validatedIdea.confidenceScore ?? 0;
-                const globalScore = (techScore + gtmScore + confidenceScore) / 3;
-                return globalScore.toFixed(1);
-              })()}
-            </div>
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-semibold mb-2">Global Score</h3>
+            <p className={`text-4xl font-bold ${getScoreColor(validatedIdea.globalScore)}`}>
+              {validatedIdea.globalScore.toFixed(1)}
+            </p>
           </div>
           
           {/* Individual Scores */}
@@ -290,19 +295,19 @@ export default function Home() {
             <div className="text-center">
               <p className="text-sm text-gray-600">Confidence</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.confidenceScore !== undefined ? validatedIdea.confidenceScore.toFixed(1) : '0.0'}
+                {validatedIdea.confidenceScore.toFixed(1)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Tech</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.techScore !== undefined ? validatedIdea.techScore.toFixed(1) : '0.0'}
+                {validatedIdea.techScore.toFixed(1)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">GTM</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.gtmScore !== undefined ? validatedIdea.gtmScore.toFixed(1) : '0.0'}
+                {validatedIdea.gtmScore.toFixed(1)}
               </p>
             </div>
           </div>
@@ -310,7 +315,7 @@ export default function Home() {
           {/* Score Explanation */}
           <div className="text-center mb-8">
             <p className="text-sm text-gray-600">
-              Scores range from 0 to 1, with 1 being the highest. The global score is an average of Confidence, Tech, and GTM scores.
+              Scores range from 0 to 10, with 10 being the highest. The global score is a weighted average of Confidence, Tech, and GTM scores.
             </p>
           </div>
 
@@ -426,7 +431,9 @@ export default function Home() {
             {validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0 ? (
               <ul className="list-disc pl-5">
                 {validatedIdea.dueDiligenceTech.map((item, index) => (
-                  <li key={index} className="mb-2">{item}</li>
+                  <li key={index} className="mb-2">
+                    {item.point} - Score: {item.score}/10
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -435,16 +442,18 @@ export default function Home() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4">🚀 Due Diligence: Go-to-Market (GTM)</h3>
-            <p className="text-gray-600 mb-4">Market-related aspects to consider and validate for this startup idea.</p>
+            <h3 className="text-2xl font-semibold mb-4">🚀 Due Diligence: Go-to-Market</h3>
+            <p className="text-gray-600 mb-4">Go-to-market strategies and considerations for this startup idea.</p>
             {validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0 ? (
               <ul className="list-disc pl-5">
                 {validatedIdea.dueDiligenceGTM.map((item, index) => (
-                  <li key={index} className="mb-2">{item}</li>
+                  <li key={index} className="mb-2">
+                    {item.point} - Score: {item.score}/10
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-600">No GTM due diligence points available.</p>
+              <p className="text-gray-600">No go-to-market due diligence points available.</p>
             )}
           </div>
 
