@@ -4,7 +4,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export export interface AnalysisResult {
+export interface AnalysisResult {
   idea: string;
   swot: {
     strengths: string[];

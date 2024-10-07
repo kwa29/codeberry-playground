@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
       5. 2 main competitors
       6. 2 market demand indicators
       7. 2 relevant frameworks
+      8. Investment memo (summary, market opportunity, business model, competitive advantage, financial projections, funding requirements)
+      9. 3 technical due diligence points
+      10. 3 go-to-market due diligence points
 
       JSON format:
       {
@@ -70,7 +73,22 @@ export async function POST(req: NextRequest) {
         "targetMarketStrategies": ["Strategy1", "Strategy2"],
         "competition": ["Competitor1", "Competitor2"],
         "marketDemandIndicators": ["Indicator1", "Indicator2"],
-        "frameworks": ["Framework1", "Framework2"]
+        "frameworks": ["Framework1", "Framework2"],
+        "globalScore": 0.0,
+        "confidenceScore": 0.0,
+        "techScore": 0.0,
+        "gtmScore": 0.0,
+        "investmentMemo": {
+          "summary": "Brief summary",
+          "marketOpportunity": "Market opportunity",
+          "businessModel": "Business model",
+          "competitiveAdvantage": "Competitive advantage",
+          "financialProjections": "Financial projections",
+          "fundingRequirements": "Funding requirements"
+        },
+        "dueDiligenceTech": ["Tech1", "Tech2", "Tech3"],
+        "dueDiligenceGTM": ["GTM1", "GTM2", "GTM3"],
+        "pitchDeckProcessed": true
       }
       Keep all responses extremely brief.
     `;
@@ -90,6 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     const parsedResponse = JSON.parse(response);
+    parsedResponse.pitchDeckProcessed = !!pitchDeckContent;
     return NextResponse.json(parsedResponse);
   } catch (error) {
     console.error('OpenAI API error:', error);

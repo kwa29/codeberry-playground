@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback, ChangeEvent, useEffect } from 'react';
-import Image from 'next/image';
+import { useState, ChangeEvent, useEffect } from 'react';
 
 // Add this list of target markets
 const targetMarkets = [
@@ -386,46 +385,25 @@ export default function Home() {
               <p className="text-indigo-600 mb-4">This analysis includes information from your provided pitch deck.</p>
             )}
             <div className="bg-gray-100 p-6 rounded-md">
-              {validatedIdea.investmentMemo && Object.values(validatedIdea.investmentMemo).some(value => value) ? (
-                <>
-                  <h4 className="text-xl font-semibold mb-3">Executive Summary</h4>
-                  <p className="mb-4">{validatedIdea.investmentMemo.summary || defaultInvestmentMemo.summary}</p>
+              <>
+                <h4 className="text-xl font-semibold mb-3">Executive Summary</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.summary || defaultInvestmentMemo.summary}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Market Opportunity</h4>
-                  <p className="mb-4">{validatedIdea.investmentMemo.marketOpportunity || defaultInvestmentMemo.marketOpportunity}</p>
+                <h4 className="text-xl font-semibold mb-3">Market Opportunity</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.marketOpportunity || defaultInvestmentMemo.marketOpportunity}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Business Model</h4>
-                  <p className="mb-4">{validatedIdea.investmentMemo.businessModel || defaultInvestmentMemo.businessModel}</p>
+                <h4 className="text-xl font-semibold mb-3">Business Model</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.businessModel || defaultInvestmentMemo.businessModel}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Competitive Advantage</h4>
-                  <p className="mb-4">{validatedIdea.investmentMemo.competitiveAdvantage || defaultInvestmentMemo.competitiveAdvantage}</p>
+                <h4 className="text-xl font-semibold mb-3">Competitive Advantage</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.competitiveAdvantage || defaultInvestmentMemo.competitiveAdvantage}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Financial Projections</h4>
-                  <p className="mb-4">{validatedIdea.investmentMemo.financialProjections || defaultInvestmentMemo.financialProjections}</p>
+                <h4 className="text-xl font-semibold mb-3">Financial Projections</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.financialProjections || defaultInvestmentMemo.financialProjections}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
-                  {validatedIdea.investmentMemo.fundingRequirements ? (
-                    <p className="mb-4">
-                      <span className="font-semibold">From Pitch Deck: </span>
-                      {validatedIdea.investmentMemo.fundingRequirements}
-                    </p>
-                  ) : (
-                    <p className="mb-4">{defaultInvestmentMemo.fundingRequirements}</p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-600 mb-4">No specific investment memo is available for this idea yet. Here are some key points to consider as you develop your investment strategy:</p>
-                  <div className="space-y-4">
-                    {Object.entries(defaultInvestmentMemo).map(([key, value]) => (
-                      <div key={key} className="border-l-4 border-indigo-500 pl-4">
-                        <h4 className="text-lg font-semibold mb-2">{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</h4>
-                        <p className="text-gray-700">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.fundingRequirements || defaultInvestmentMemo.fundingRequirements}</p>
+              </>
             </div>
           </div>
 
