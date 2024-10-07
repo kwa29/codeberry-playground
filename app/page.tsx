@@ -1,7 +1,21 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, ChangeEvent } from 'react';
 import Image from 'next/image';
+
+// Add this list of target markets
+const targetMarkets = [
+  'Small Businesses',
+  'Enterprise Companies',
+  'Consumers',
+  'Students',
+  'Freelancers',
+  'Healthcare Providers',
+  'Educational Institutions',
+  'Non-profit Organizations',
+  'Government Agencies',
+  'Tech Startups'
+];
 
 interface ValidatedIdea {
   idea: string;
@@ -22,10 +36,22 @@ interface ValidatedIdea {
 export default function Home() {
   const [query, setQuery] = useState('');
   const [targetMarket, setTargetMarket] = useState('');
+  const [pitchDeck, setPitchDeck] = useState<File | null>(null);
   const [validatedIdea, setValidatedIdea] = useState<ValidatedIdea | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPitchDeck(e.target.files[0]);
+      setFileName(e.target.files[0].name);
+    } else {
+      setPitchDeck(null);
+      setFileName(null);
+    }
+  };
 
   const generateAndValidateIdea = async () => {
     setIsLoading(true);
@@ -33,24 +59,42 @@ export default function Home() {
     setProgress(0);
     try {
       setProgress(25);
+      const formData = new FormData();
+      formData.append('query', query);
+      formData.append('targetMarket', targetMarket);
+      if (pitchDeck) {
+        formData.append('pitchDeck', pitchDeck);
+      }
+
       const response = await fetch('/api/generate-idea', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query, targetMarket }),
+        body: formData,
       });
       setProgress(50);
-      const data = await response.json();
+      
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        console.error('Raw response:', responseText);
+        throw new Error('Invalid JSON response from server');
+      }
+
       if (response.status !== 200) {
-        throw data.error || new Error(`Request failed with status ${response.status}`);
+        throw new Error(data.error || `Request failed with status ${response.status}`);
       }
       setProgress(75);
       setValidatedIdea(data);
       setProgress(100);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error:', error);
-      setError('An error occurred while generating and validating the idea. Please try again.');
+      if (error instanceof Error) {
+        setError(`An error occurred while generating and validating the idea: ${error.message}. Please try again.`);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -70,27 +114,52 @@ export default function Home() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="idea" className="block text-sm font-medium text-gray-700">Your business idea</label>
-              <input
+              <textarea
                 id="idea"
-                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter your startup idea"
+                placeholder="Describe your startup idea in detail"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                rows={3}
                 required
               />
             </div>
             <div>
               <label htmlFor="market" className="block text-sm font-medium text-gray-700">Target market</label>
-              <input
+              <select
                 id="market"
-                type="text"
                 value={targetMarket}
                 onChange={(e) => setTargetMarket(e.target.value)}
-                placeholder="Describe your target market"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 required
+              >
+                <option value="" disabled>Select a target market</option>
+                {targetMarkets.map((market) => (
+                  <option key={market} value={market}>
+                    {market}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="pitchDeck" className="block text-sm font-medium text-gray-700">Upload Pitch Deck (optional)</label>
+              <input
+                type="file"
+                id="pitchDeck"
+                onChange={handleFileChange}
+                accept=".pdf,.ppt,.pptx"
+                className="mt-1 block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100"
               />
+              {fileName && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Selected file: {fileName}
+                </p>
+              )}
             </div>
             <button
               type="submit"
@@ -200,7 +269,7 @@ export default function Home() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4">🚀 Your ACTION PLAN</h3>
+            <h3 className="text-2xl font-semibold mb-4">🚀 Your Action Plan</h3>
             <p className="text-gray-600 mb-4">Actionable steps to move your startup idea from concept to reality and bring you closer to 100K MRR🤑.</p>
             <ol className="list-decimal pl-5">
               {validatedIdea.actionPlan.map((step, index) => (
@@ -210,7 +279,7 @@ export default function Home() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4">📈 Market DEMAND INDICATORS</h3>
+            <h3 className="text-2xl font-semibold mb-4">📈 Market Demand Indicators</h3>
             <p className="text-gray-600 mb-4">Key signals that suggest a strong market need for your startup. These indicators can guide your strategy to align with market demand.</p>
             <ul className="list-disc pl-5">
               {validatedIdea.marketDemandIndicators.map((indicator, index) => (
