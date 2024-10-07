@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, ChangeEvent } from 'react';
+import { useState, useCallback, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
 
 // Add this list of target markets
@@ -31,21 +31,27 @@ interface ValidatedIdea {
   competition: string[];
   marketDemandIndicators: string[];
   frameworks: string[];
-  globalScore?: number;
-  confidenceScore?: number;
-  techScore?: number;
-  gtmScore?: number;
+  globalScore: number;
+  confidenceScore: number;
+  techScore: number;
+  gtmScore: number;
   investmentMemo: {
-    summary?: string;
-    marketOpportunity?: string;
-    businessModel?: string;
-    competitiveAdvantage?: string;
-    financialProjections?: string;
-    fundingRequirements?: string;
+    summary: string;
+    marketOpportunity: string;
+    businessModel: string;
+    competitiveAdvantage: string;
+    financialProjections: string;
+    fundingRequirements: string;
   };
   dueDiligenceTech: string[];
   dueDiligenceGTM: string[];
   pitchDeckProcessed: boolean;
+  overallSentiment: 'positive' | 'neutral' | 'negative';
+  sentimentScores: {
+    positive: number;
+    negative: number;
+    neutral: number;
+  };
 }
 
 const defaultInvestmentMemo = {
@@ -69,8 +75,18 @@ export default function Home() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setPitchDeck(e.target.files[0]);
-      setFileName(e.target.files[0].name);
+      const file = e.target.files[0];
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (fileExtension === 'pdf' || fileExtension === 'pptx') {
+        setPitchDeck(file);
+        setFileName(file.name);
+        setError(null);
+      } else {
+        setPitchDeck(null);
+        setFileName(null);
+        setError('Please upload a PDF or PowerPoint file.');
+      }
     } else {
       setPitchDeck(null);
       setFileName(null);
@@ -156,6 +172,16 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (validatedIdea) {
+      console.log('Received scores:', {
+        confidenceScore: validatedIdea.confidenceScore,
+        techScore: validatedIdea.techScore,
+        gtmScore: validatedIdea.gtmScore
+      });
+    }
+  }, [validatedIdea]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-100">
       <h1 className="text-4xl font-bold mb-8 text-center">Startup Idea Validator 🚀</h1>
@@ -193,12 +219,12 @@ export default function Home() {
               </select>
             </div>
             <div>
-              <label htmlFor="pitchDeck" className="block text-sm font-medium text-gray-700">Upload Pitch Deck (optional)</label>
+              <label htmlFor="pitchDeck" className="block text-sm font-medium text-gray-700">Upload Pitch Deck (PDF or PowerPoint)</label>
               <input
                 type="file"
                 id="pitchDeck"
                 onChange={handleFileChange}
-                accept=".pdf,.ppt,.pptx"
+                accept=".pdf,.pptx"
                 className="mt-1 block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-md file:border-0
@@ -209,6 +235,11 @@ export default function Home() {
               {fileName && (
                 <p className="mt-2 text-sm text-gray-500">
                   Selected file: {fileName}
+                </p>
+              )}
+              {error && (
+                <p className="mt-2 text-sm text-red-500">
+                  {error}
                 </p>
               )}
             </div>
@@ -239,48 +270,49 @@ export default function Home() {
 
       {validatedIdea && (
         <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold mb-6 text-center">Your startup idea has been assessed! </h2>
+          <h2 className="text-3xl font-bold mb-6 text-center">Your startup idea has been assessed! 🔍</h2>
           <p className="text-center text-gray-600 mb-8">Here's a summary of your startup's potential and actionable steps to move forward.</p>
           
-          {/* Add this new section for the global score */}
+          {/* Global Score */}
           <div className="flex justify-center items-center mb-8">
             <div className="bg-indigo-600 text-white text-2xl font-bold rounded-full w-24 h-24 flex items-center justify-center">
               {(() => {
-                const techScore = validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0
-                  ? (validatedIdea.techScore ?? 0)
-                  : 0;
-                const gtmScore = validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0
-                  ? (validatedIdea.gtmScore ?? 0)
-                  : 0;
+                const techScore = validatedIdea.techScore ?? 0;
+                const gtmScore = validatedIdea.gtmScore ?? 0;
                 const confidenceScore = validatedIdea.confidenceScore ?? 0;
                 const globalScore = (techScore + gtmScore + confidenceScore) / 3;
                 return globalScore.toFixed(1);
               })()}
             </div>
           </div>
+          
+          {/* Individual Scores */}
           <div className="flex justify-center items-center mb-8 space-x-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Confidence</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.confidenceScore !== undefined ? validatedIdea.confidenceScore.toFixed(1) : 'N/A'}
+                {validatedIdea.confidenceScore !== undefined ? validatedIdea.confidenceScore.toFixed(1) : '0.0'}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Tech</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0
-                  ? (validatedIdea.techScore !== undefined ? validatedIdea.techScore.toFixed(1) : 'N/A')
-                  : '0.0'}
+                {validatedIdea.techScore !== undefined ? validatedIdea.techScore.toFixed(1) : '0.0'}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">GTM</p>
               <p className="text-lg font-semibold">
-                {validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0
-                  ? (validatedIdea.gtmScore !== undefined ? validatedIdea.gtmScore.toFixed(1) : 'N/A')
-                  : '0.0'}
+                {validatedIdea.gtmScore !== undefined ? validatedIdea.gtmScore.toFixed(1) : '0.0'}
               </p>
             </div>
+          </div>
+          
+          {/* Score Explanation */}
+          <div className="text-center mb-8">
+            <p className="text-sm text-gray-600">
+              Scores range from 0 to 1, with 1 being the highest. The global score is an average of Confidence, Tech, and GTM scores.
+            </p>
           </div>
 
           <div className="flex justify-between mb-8">
