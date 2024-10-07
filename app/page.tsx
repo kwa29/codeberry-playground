@@ -45,6 +45,7 @@ interface ValidatedIdea {
   };
   dueDiligenceTech: string[];
   dueDiligenceGTM: string[];
+  pitchDeckProcessed: boolean;
 }
 
 const defaultInvestmentMemo = {
@@ -104,6 +105,8 @@ export default function Home() {
         console.error('Raw response:', responseText);
         throw new Error('Invalid JSON response from server');
       }
+
+      console.log('API Response:', data); // Add this line for debugging
 
       if (response.status !== 200) {
         throw new Error(data.error || `Request failed with status ${response.status}`);
@@ -347,6 +350,9 @@ export default function Home() {
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">💼 Investment Memo</h3>
             <p className="text-gray-600 mb-4">A comprehensive analysis of the investment potential for this startup idea.</p>
+            {validatedIdea.pitchDeckProcessed && (
+              <p className="text-indigo-600 mb-4">This analysis includes information from your provided pitch deck.</p>
+            )}
             <div className="bg-gray-100 p-6 rounded-md">
               {validatedIdea.investmentMemo && Object.values(validatedIdea.investmentMemo).some(value => value) ? (
                 <>
@@ -366,7 +372,14 @@ export default function Home() {
                   <p className="mb-4">{validatedIdea.investmentMemo.financialProjections || defaultInvestmentMemo.financialProjections}</p>
 
                   <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
-                  <p>{validatedIdea.investmentMemo.fundingRequirements || defaultInvestmentMemo.fundingRequirements}</p>
+                  {validatedIdea.investmentMemo.fundingRequirements ? (
+                    <p className="mb-4">
+                      <span className="font-semibold">From Pitch Deck: </span>
+                      {validatedIdea.investmentMemo.fundingRequirements}
+                    </p>
+                  ) : (
+                    <p className="mb-4">{defaultInvestmentMemo.fundingRequirements}</p>
+                  )}
                 </>
               ) : (
                 <>
