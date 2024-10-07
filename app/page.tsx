@@ -31,7 +31,30 @@ interface ValidatedIdea {
   competition: string[];
   marketDemandIndicators: string[];
   frameworks: string[];
+  globalScore?: number;
+  confidenceScore?: number;
+  techScore?: number;
+  gtmScore?: number;
+  investmentMemo: {
+    summary?: string;
+    marketOpportunity?: string;
+    businessModel?: string;
+    competitiveAdvantage?: string;
+    financialProjections?: string;
+    fundingRequirements?: string;
+  };
+  dueDiligenceTech: string[];
+  dueDiligenceGTM: string[];
 }
+
+const defaultInvestmentMemo = {
+  summary: "Your startup idea has potential. Consider expanding on your unique value proposition and how it addresses a specific market need.",
+  marketOpportunity: "Analyze your target market size, growth rate, and any emerging trends that your startup can capitalize on.",
+  businessModel: "Outline how your startup will generate revenue. Consider various monetization strategies and how they align with your target market.",
+  competitiveAdvantage: "Identify what sets your startup apart from existing solutions. This could be innovative technology, unique features, or a novel approach to solving a problem.",
+  financialProjections: "Develop realistic financial projections for the next 3-5 years. Include expected revenue, costs, and potential profitability milestones.",
+  fundingRequirements: "Estimate the amount of funding needed to reach key milestones. Break down how the funds will be used across different areas of your startup."
+};
 
 export default function Home() {
   const [query, setQuery] = useState('');
@@ -213,9 +236,50 @@ export default function Home() {
 
       {validatedIdea && (
         <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold mb-6 text-center">Your startup idea has been assessed! 🔍</h2>
+          <h2 className="text-3xl font-bold mb-6 text-center">Your startup idea has been assessed! </h2>
           <p className="text-center text-gray-600 mb-8">Here's a summary of your startup's potential and actionable steps to move forward.</p>
           
+          {/* Add this new section for the global score */}
+          <div className="flex justify-center items-center mb-8">
+            <div className="bg-indigo-600 text-white text-2xl font-bold rounded-full w-24 h-24 flex items-center justify-center">
+              {(() => {
+                const techScore = validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0
+                  ? (validatedIdea.techScore ?? 0)
+                  : 0;
+                const gtmScore = validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0
+                  ? (validatedIdea.gtmScore ?? 0)
+                  : 0;
+                const confidenceScore = validatedIdea.confidenceScore ?? 0;
+                const globalScore = (techScore + gtmScore + confidenceScore) / 3;
+                return globalScore.toFixed(1);
+              })()}
+            </div>
+          </div>
+          <div className="flex justify-center items-center mb-8 space-x-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Confidence</p>
+              <p className="text-lg font-semibold">
+                {validatedIdea.confidenceScore !== undefined ? validatedIdea.confidenceScore.toFixed(1) : 'N/A'}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Tech</p>
+              <p className="text-lg font-semibold">
+                {validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0
+                  ? (validatedIdea.techScore !== undefined ? validatedIdea.techScore.toFixed(1) : 'N/A')
+                  : '0.0'}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">GTM</p>
+              <p className="text-lg font-semibold">
+                {validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0
+                  ? (validatedIdea.gtmScore !== undefined ? validatedIdea.gtmScore.toFixed(1) : 'N/A')
+                  : '0.0'}
+              </p>
+            </div>
+          </div>
+
           <div className="flex justify-between mb-8">
             <button onClick={() => setValidatedIdea(null)} className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
               Validate another idea
@@ -231,101 +295,211 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-100 p-4 rounded-md">
                 <h4 className="font-bold text-blue-700 mb-2">Strengths</h4>
-                <ul className="list-disc pl-5">
-                  {validatedIdea.swot.strengths.map((strength, index) => (
-                    <li key={index}>{strength}</li>
-                  ))}
-                </ul>
+                {validatedIdea.swot.strengths && validatedIdea.swot.strengths.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {validatedIdea.swot.strengths.map((strength, index) => (
+                      <li key={index}>{strength}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No strengths identified.</p>
+                )}
               </div>
               <div className="bg-yellow-100 p-4 rounded-md">
                 <h4 className="font-bold text-yellow-700 mb-2">Weaknesses</h4>
-                <ul className="list-disc pl-5">
-                  {validatedIdea.swot.weaknesses.map((weakness, index) => (
-                    <li key={index}>{weakness}</li>
-                  ))}
-                </ul>
+                {validatedIdea.swot.weaknesses && validatedIdea.swot.weaknesses.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {validatedIdea.swot.weaknesses.map((weakness, index) => (
+                      <li key={index}>{weakness}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No weaknesses identified.</p>
+                )}
               </div>
               <div className="bg-green-100 p-4 rounded-md">
                 <h4 className="font-bold text-green-700 mb-2">Opportunities</h4>
-                <ul className="list-disc pl-5">
-                  {validatedIdea.swot.opportunities.map((opportunity, index) => (
-                    <li key={index}>{opportunity}</li>
-                  ))}
-                </ul>
+                {validatedIdea.swot.opportunities && validatedIdea.swot.opportunities.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {validatedIdea.swot.opportunities.map((opportunity, index) => (
+                      <li key={index}>{opportunity}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No opportunities identified.</p>
+                )}
               </div>
               <div className="bg-red-100 p-4 rounded-md">
                 <h4 className="font-bold text-red-700 mb-2">Threats</h4>
-                <ul className="list-disc pl-5">
-                  {validatedIdea.swot.threats.map((threat, index) => (
-                    <li key={index}>{threat}</li>
-                  ))}
-                </ul>
+                {validatedIdea.swot.threats && validatedIdea.swot.threats.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {validatedIdea.swot.threats.map((threat, index) => (
+                      <li key={index}>{threat}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No threats identified.</p>
+                )}
               </div>
             </div>
           </div>
 
           <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">💼 Investment Memo</h3>
+            <p className="text-gray-600 mb-4">A comprehensive analysis of the investment potential for this startup idea.</p>
+            <div className="bg-gray-100 p-6 rounded-md">
+              {validatedIdea.investmentMemo && Object.values(validatedIdea.investmentMemo).some(value => value) ? (
+                <>
+                  <h4 className="text-xl font-semibold mb-3">Executive Summary</h4>
+                  <p className="mb-4">{validatedIdea.investmentMemo.summary || defaultInvestmentMemo.summary}</p>
+
+                  <h4 className="text-xl font-semibold mb-3">Market Opportunity</h4>
+                  <p className="mb-4">{validatedIdea.investmentMemo.marketOpportunity || defaultInvestmentMemo.marketOpportunity}</p>
+
+                  <h4 className="text-xl font-semibold mb-3">Business Model</h4>
+                  <p className="mb-4">{validatedIdea.investmentMemo.businessModel || defaultInvestmentMemo.businessModel}</p>
+
+                  <h4 className="text-xl font-semibold mb-3">Competitive Advantage</h4>
+                  <p className="mb-4">{validatedIdea.investmentMemo.competitiveAdvantage || defaultInvestmentMemo.competitiveAdvantage}</p>
+
+                  <h4 className="text-xl font-semibold mb-3">Financial Projections</h4>
+                  <p className="mb-4">{validatedIdea.investmentMemo.financialProjections || defaultInvestmentMemo.financialProjections}</p>
+
+                  <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
+                  <p>{validatedIdea.investmentMemo.fundingRequirements || defaultInvestmentMemo.fundingRequirements}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600 mb-4">No specific investment memo is available for this idea yet. Here are some key points to consider as you develop your investment strategy:</p>
+                  <div className="space-y-4">
+                    {Object.entries(defaultInvestmentMemo).map(([key, value]) => (
+                      <div key={key} className="border-l-4 border-indigo-500 pl-4">
+                        <h4 className="text-lg font-semibold mb-2">{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</h4>
+                        <p className="text-gray-700">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">Critical Questions</h3>
-            <ul className="list-disc pl-5">
-              {validatedIdea.criticalQuestions.map((question, index) => (
-                <li key={index} className="mb-2">{question}</li>
-              ))}
-            </ul>
+            {validatedIdea.criticalQuestions && validatedIdea.criticalQuestions.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.criticalQuestions.map((question, index) => (
+                  <li key={index} className="mb-2">{question}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No critical questions available.</p>
+            )}
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">🔬 Due Diligence: Tech</h3>
+            <p className="text-gray-600 mb-4">Technical aspects to consider and validate for this startup idea.</p>
+            {validatedIdea.dueDiligenceTech && validatedIdea.dueDiligenceTech.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.dueDiligenceTech.map((item, index) => (
+                  <li key={index} className="mb-2">{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No technical due diligence points available.</p>
+            )}
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4">🚀 Due Diligence: Go-to-Market (GTM)</h3>
+            <p className="text-gray-600 mb-4">Market-related aspects to consider and validate for this startup idea.</p>
+            {validatedIdea.dueDiligenceGTM && validatedIdea.dueDiligenceGTM.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.dueDiligenceGTM.map((item, index) => (
+                  <li key={index} className="mb-2">{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No GTM due diligence points available.</p>
+            )}
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">📊 5 Ways to Reach Your Target Market</h3>
             <p className="text-gray-600 mb-4">Strategies to connect with and engage your target audience, crucial for your startup's market penetration.</p>
-            <ol className="list-decimal pl-5">
-              {validatedIdea.targetMarketStrategies.map((strategy, index) => (
-                <li key={index} className="mb-2">{strategy}</li>
-              ))}
-            </ol>
+            {validatedIdea.targetMarketStrategies && validatedIdea.targetMarketStrategies.length > 0 ? (
+              <ol className="list-decimal pl-5">
+                {validatedIdea.targetMarketStrategies.map((strategy, index) => (
+                  <li key={index} className="mb-2">{strategy}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-gray-600">No target market strategies available.</p>
+            )}
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">🏆 Competition or Similar Players to Keep in Mind</h3>
             <p className="text-gray-600 mb-4">Understand your competitive landscape. Knowing your rivals helps in positioning your startup strategically in the market.</p>
-            <ul className="list-disc pl-5">
-              {validatedIdea.competition.map((competitor, index) => (
-                <li key={index} className="mb-2">{competitor}</li>
-              ))}
-            </ul>
+            {validatedIdea.competition && validatedIdea.competition.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.competition.map((competitor, index) => (
+                  <li key={index} className="mb-2">{competitor}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No competition data available.</p>
+            )}
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">🚀 Your Action Plan</h3>
             <p className="text-gray-600 mb-4">Actionable steps to move your startup idea from concept to reality and bring you closer to 100K MRR🤑.</p>
-            <ol className="list-decimal pl-5">
-              {validatedIdea.actionPlan.map((step, index) => (
-                <li key={index} className="mb-2">{step}</li>
-              ))}
-            </ol>
+            {validatedIdea.actionPlan && validatedIdea.actionPlan.length > 0 ? (
+              <ol className="list-decimal pl-5">
+                {validatedIdea.actionPlan.map((step, index) => (
+                  <li key={index} className="mb-2">{step}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-gray-600">No action plan available.</p>
+            )}
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">📈 Market Demand Indicators</h3>
             <p className="text-gray-600 mb-4">Key signals that suggest a strong market need for your startup. These indicators can guide your strategy to align with market demand.</p>
-            <ul className="list-disc pl-5">
-              {validatedIdea.marketDemandIndicators.map((indicator, index) => (
-                <li key={index} className="mb-2">{indicator}</li>
-              ))}
-            </ul>
+            {validatedIdea.marketDemandIndicators && validatedIdea.marketDemandIndicators.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.marketDemandIndicators.map((indicator, index) => (
+                  <li key={index} className="mb-2">{indicator}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No market demand indicators available.</p>
+            )}
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-semibold mb-4">📚 Frameworks to Evaluate</h3>
             <p className="text-gray-600 mb-4">Strategic frameworks to critically assess and enhance your startup's approach and business model.</p>
-            <ul className="list-disc pl-5">
-              {validatedIdea.frameworks.map((framework, index) => (
-                <li key={index} className="mb-2">{framework}</li>
-              ))}
-            </ul>
+            {validatedIdea.frameworks && validatedIdea.frameworks.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {validatedIdea.frameworks.map((framework, index) => (
+                  <li key={index} className="mb-2">{framework}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600">No frameworks available.</p>
+            )}
           </div>
 
           <div className="text-center">
             <a
-              href="#"
+              href="https://codeberry.ai"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 text-lg font-semibold"
             >
               Start Building Your Startup
