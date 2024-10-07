@@ -105,6 +105,31 @@ export default function Home() {
     generateAndValidateIdea();
   };
 
+  const handleShare = async () => {
+    if (!validatedIdea) return;
+
+    const shareText = `Check out my startup idea: ${validatedIdea.idea}\n\nStrengths: ${validatedIdea.swot.strengths.join(', ')}\nWeaknesses: ${validatedIdea.swot.weaknesses.join(', ')}\nOpportunities: ${validatedIdea.swot.opportunities.join(', ')}\nThreats: ${validatedIdea.swot.threats.join(', ')}\n\nAction Plan: ${validatedIdea.actionPlan.join(', ')}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Startup Idea',
+          text: shareText,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback to copying to clipboard
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('Summary copied to clipboard!');
+      }, (err) => {
+        console.error('Could not copy text: ', err);
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-100">
       <h1 className="text-4xl font-bold mb-8 text-center">Startup Idea Validator 🚀</h1>
@@ -195,7 +220,7 @@ export default function Home() {
             <button onClick={() => setValidatedIdea(null)} className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
               Validate another idea
             </button>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+            <button onClick={handleShare} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
               Share
             </button>
           </div>
