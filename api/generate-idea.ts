@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { analyzeText, AnalysisResult } from '@/utils/textAnalyzer';
+import { analyzeText, AnalysisResult } from './textAnalyzer';
 import { IncomingForm } from 'formidable';
 import fs from 'fs/promises';
 import pdfParse from 'pdf-parse';
