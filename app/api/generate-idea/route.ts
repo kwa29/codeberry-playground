@@ -94,9 +94,10 @@ export async function POST(req: NextRequest) {
       6. 2 market demand indicators
       7. 2 relevant frameworks
       8. Investment memo (summary, market opportunity, business model, competitive advantage, financial projections, funding requirements)
-      9. 3 technical due diligence points with scores (0-100%)
-      10. 3 go-to-market due diligence points with scores (0-100%)
-      11. 6 investment memo quality scores (0-100%) for each section of the investment memo
+      9. Key metrics (TAM, SAM, SOM)
+      10. 3 technical due diligence points with scores (0-100%)
+      11. 3 go-to-market due diligence points with scores (0-100%)
+      12. 6 investment memo quality scores (0-100%) for each section of the investment memo
 
       Use the pitch deck information (if available) to inform your analysis, especially for the due diligence points and scores.
 
@@ -121,7 +122,12 @@ export async function POST(req: NextRequest) {
           "businessModel": "Business model",
           "competitiveAdvantage": "Competitive advantage",
           "financialProjections": "Financial projections",
-          "fundingRequirements": "Funding requirements"
+          "fundingRequirements": "Funding requirements",
+          "keyMetrics": {
+            "tam": "Total Addressable Market size",
+            "sam": "Serviceable Addressable Market size",
+            "som": "Serviceable Obtainable Market size"
+          }
         },
         "dueDiligenceTech": [
           {"point": "Tech1", "score": 0},
@@ -205,6 +211,15 @@ export async function POST(req: NextRequest) {
     // Combine the initial analysis with industry averages and calculated scores
     const combinedResponse = {
       ...parsedResponse,
+      investmentMemo: {
+        ...parsedResponse.investmentMemo,
+        keyMetrics: {
+          ...parsedResponse.investmentMemo.keyMetrics,
+          cac: industryAverages.averageCAC,
+          ltv: industryAverages.averageLTV,
+          burnRate: industryAverages.averageBurnRate
+        }
+      },
       industryAverages,
       ...scores
     };

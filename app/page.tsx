@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import { CSVLink } from 'react-csv';
+import React from 'react';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -34,6 +35,18 @@ interface ValidatedIdea {
     competitiveAdvantage: string;
     financialProjections: string;
     fundingRequirements: string;
+    productOverview: string;
+    teamBackground: string;
+    goToMarketStrategy: string;
+    keyMetrics: {
+      tam: string;
+      sam: string;
+      som: string;
+      cac: string;
+      ltv: string;
+      burnRate: string;
+    };
+    keyRisksAndMitigation: { risk: string; mitigation: string }[];
   };
   investmentMemoScores: {
     summary: number;
@@ -80,6 +93,59 @@ interface IndustryAverages {
   averageBurnRate: string;
   averageRevenueGrowth: string;
 }
+
+interface NestedCircleChartProps {
+  data: Array<{
+    label: string;
+    subLabel: string;
+    value: number;
+  }>;
+}
+
+const NestedCircleChart: React.FC<NestedCircleChartProps> = ({ data }) => {
+  const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+  let accumulatedRadius = 0;
+
+  return (
+    <svg width="300" height="300" viewBox="0 0 100 100">
+      {data.map((item, index) => {
+        const radius = Math.sqrt(item.value / totalValue) * 50;
+        const circle = (
+          <circle
+            key={`circle-${index}`}
+            cx="50"
+            cy="50"
+            r={radius}
+            fill={`hsl(${index * 120}, 70%, 80%)`}
+            stroke="#fff"
+            strokeWidth="0.5"
+          />
+        );
+        accumulatedRadius += radius;
+        return circle;
+      })}
+      {data.map((item, index) => {
+        const radius = Math.sqrt(item.value / totalValue) * 50;
+        const angle = -Math.PI / 2 + (accumulatedRadius - radius / 2) / 50 * Math.PI;
+        const x = 50 + Math.cos(angle) * 40;
+        const y = 50 + Math.sin(angle) * 40;
+        accumulatedRadius -= radius;
+        return (
+          <text
+            key={`text-${index}`}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            fontSize="4"
+            fill="#333"
+          >
+            {item.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+};
 
 function getScoreColor(score: number): string {
   if (score <= 33.33) {
@@ -199,6 +265,21 @@ export default function Home() {
         dueDiligenceTech: data.dueDiligenceTech ?? [],
         dueDiligenceGTM: data.dueDiligenceGTM ?? [],
         investmentMemoScores: data.investmentMemoScores ?? {},
+        investmentMemo: {
+          ...data.investmentMemo,
+          productOverview: data.investmentMemo?.productOverview || "Product overview not available.",
+          teamBackground: data.investmentMemo?.teamBackground || "Team background not available.",
+          goToMarketStrategy: data.investmentMemo?.goToMarketStrategy || "Go-to-market strategy not available.",
+          keyMetrics: {
+            tam: data.investmentMemo?.keyMetrics?.tam || "N/A",
+            sam: data.investmentMemo?.keyMetrics?.sam || "N/A",
+            som: data.investmentMemo?.keyMetrics?.som || "N/A",
+            cac: data.investmentMemo?.keyMetrics?.cac || "N/A",
+            ltv: data.investmentMemo?.keyMetrics?.ltv || "N/A",
+            burnRate: data.investmentMemo?.keyMetrics?.burnRate || "N/A",
+          },
+          keyRisksAndMitigation: data.investmentMemo?.keyRisksAndMitigation ?? [],
+        },
       };
 
       setValidatedIdea(processedData);
@@ -305,6 +386,12 @@ export default function Home() {
     Idea: analysis.idea,
     'Global Score': analysis.globalScore.toFixed(1) + '%',
   }));
+
+  const marketSizeData = [
+    { label: 'TAM', subLabel: validatedIdea?.investmentMemo.keyMetrics.tam || 'Not available', value: 100 },
+    { label: 'SAM', subLabel: validatedIdea?.investmentMemo.keyMetrics.sam || 'Not available', value: 50 },
+    { label: 'SOM', subLabel: validatedIdea?.investmentMemo.keyMetrics.som || 'Not available', value: 25 },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -487,31 +574,78 @@ export default function Home() {
                 <p className="text-indigo-600 mb-4">This analysis includes information from your provided pitch deck.</p>
               )}
               <div className="bg-gray-100 p-6 rounded-md">
-                <>
-                  <h4 className="text-xl font-semibold mb-3">Executive Summary</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.summary || defaultInvestmentMemo.summary}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.summary.toFixed(1)}%</p>
+                <h4 className="text-xl font-semibold mb-3">Key Metrics</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  {[
+                    { label: 'TAM', key: 'tam' },
+                    { label: 'SAM', key: 'sam' },
+                    { label: 'SOM', key: 'som' },
+                    { label: 'CAC', key: 'cac' },
+                    { label: 'LTV', key: 'ltv' },
+                    { label: 'Burn Rate', key: 'burnRate' },
+                  ].map(({ label, key }) => (
+                    <div key={key}>
+                      <p className="font-semibold">{label}:</p>
+                      <p>{validatedIdea.investmentMemo.keyMetrics[key as keyof typeof validatedIdea.investmentMemo.keyMetrics] || 'Not available'}</p>
+                    </div>
+                  ))}
+                </div>
 
-                  <h4 className="text-xl font-semibold mb-3">Market Opportunity</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.marketOpportunity || defaultInvestmentMemo.marketOpportunity}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.marketOpportunity.toFixed(1)}%</p>
+                <h4 className="text-xl font-semibold mb-3">Executive Summary</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.summary}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Business Model</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.businessModel || defaultInvestmentMemo.businessModel}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.businessModel.toFixed(1)}%</p>
+                <h4 className="text-xl font-semibold mb-3">Product Overview</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.productOverview}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Competitive Advantage</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.competitiveAdvantage || defaultInvestmentMemo.competitiveAdvantage}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.competitiveAdvantage.toFixed(1)}%</p>
+                <h4 className="text-xl font-semibold mb-3">Market Opportunity</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.marketOpportunity}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Financial Projections</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.financialProjections || defaultInvestmentMemo.financialProjections}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.financialProjections.toFixed(1)}%</p>
+                <h4 className="text-xl font-semibold mb-3">Business Model</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.businessModel}</p>
 
-                  <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
-                  <p className="mb-2">{validatedIdea.investmentMemo.fundingRequirements || defaultInvestmentMemo.fundingRequirements}</p>
-                  <p className="text-sm text-gray-600 mb-4">Score: {validatedIdea.investmentMemoScores.fundingRequirements.toFixed(1)}%</p>
-                </>
+                <h4 className="text-xl font-semibold mb-3">Competitive Advantage</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.competitiveAdvantage}</p>
+
+                <h4 className="text-xl font-semibold mb-3">Go-to-Market Strategy</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.goToMarketStrategy}</p>
+
+                <h4 className="text-xl font-semibold mb-3">Team Background</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.teamBackground}</p>
+
+                <h4 className="text-xl font-semibold mb-3">Financial Projections</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.financialProjections}</p>
+
+                <h4 className="text-xl font-semibold mb-3">Funding Requirements</h4>
+                <p className="mb-4">{validatedIdea.investmentMemo.fundingRequirements}</p>
+              </div>
+              <div className="mt-6">
+                <h4 className="text-xl font-semibold mb-3">Market Size Visualization</h4>
+                <div className="flex justify-center">
+                  <NestedCircleChart data={marketSizeData} />
+                </div>
+                <div className="flex justify-center mt-4">
+                  {marketSizeData.map((d, i) => (
+                    <div key={i} className="mx-4 text-center">
+                      <p className="font-semibold">{d.label}</p>
+                      <p>{d.subLabel}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <h4 className="text-xl font-semibold mb-3">Key Risks and Mitigation Strategies</h4>
+              <div className="space-y-4">
+                {validatedIdea.investmentMemo.keyRisksAndMitigation && 
+                 validatedIdea.investmentMemo.keyRisksAndMitigation.length > 0 ? (
+                  validatedIdea.investmentMemo.keyRisksAndMitigation.map((item, index) => (
+                    <div key={index} className="bg-white p-4 rounded-md shadow">
+                      <p className="font-semibold text-red-600">Risk: {item.risk}</p>
+                      <p className="mt-2 text-green-600">Mitigation: {item.mitigation}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600">No key risks or mitigation strategies identified.</p>
+                )}
               </div>
             </div>
 
