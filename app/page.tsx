@@ -52,6 +52,7 @@ interface ValidatedIdea {
     negative: number;
     neutral: number;
   };
+  industryAverages: IndustryAverages;
 }
 
 const defaultInvestmentMemo = {
@@ -69,6 +70,15 @@ interface SavedAnalysis {
   date: string;
   idea: string;
   globalScore: number;
+}
+
+interface IndustryAverages {
+  averageFunding: string;
+  averageTimeToMarket: string;
+  averageCAC: string;
+  averageLTV: string;
+  averageBurnRate: string;
+  averageRevenueGrowth: string;
 }
 
 function getScoreColor(score: number): string {
@@ -627,9 +637,34 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mb-8">
-              <h3 className="text-2xl font-semibold mb-4">Industry Averages (Coming Soon)</h3>
-              <p className="text-gray-600">We're working on gathering industry data to provide you with relevant comparisons.</p>
+            <div className="mt-8">
+              <h3 className="text-2xl font-semibold mb-4">Industry Averages</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="font-semibold">Average Funding:</p>
+                  <p>{validatedIdea.industryAverages.averageFunding}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Average Time to Market:</p>
+                  <p>{validatedIdea.industryAverages.averageTimeToMarket}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Average CAC:</p>
+                  <p>{validatedIdea.industryAverages.averageCAC}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Average LTV:</p>
+                  <p>{validatedIdea.industryAverages.averageLTV}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Average Burn Rate:</p>
+                  <p>{validatedIdea.industryAverages.averageBurnRate}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Average Revenue Growth:</p>
+                  <p>{validatedIdea.industryAverages.averageRevenueGrowth}</p>
+                </div>
+              </div>
             </div>
 
             <button onClick={saveAnalysis} className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 mb-4">

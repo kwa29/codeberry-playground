@@ -39,6 +39,27 @@ function calculateWeightedScore(scores: number[], weights: number[]): number {
   return scores.reduce((sum, score, index) => sum + score * weights[index], 0) / totalWeight;
 }
 
+function calculateScores(parsedResponse: any) {
+  // Calculate Tech Score
+  const techScore = parsedResponse.dueDiligenceTech.reduce((sum: number, item: any) => sum + item.score, 0) / parsedResponse.dueDiligenceTech.length;
+
+  // Calculate GTM Score
+  const gtmScore = parsedResponse.dueDiligenceGTM.reduce((sum: number, item: any) => sum + item.score, 0) / parsedResponse.dueDiligenceGTM.length;
+
+  // Calculate Confidence Score (based on investment memo scores)
+  const confidenceScore = Object.values(parsedResponse.investmentMemoScores).reduce((sum: number, score: any) => sum + score, 0) / Object.keys(parsedResponse.investmentMemoScores).length;
+
+  // Calculate Global Score (weighted average of the other scores)
+  const globalScore = (techScore * 0.3 + gtmScore * 0.3 + confidenceScore * 0.4);
+
+  return {
+    techScore: normalizeScore(techScore),
+    gtmScore: normalizeScore(gtmScore),
+    confidenceScore: normalizeScore(confidenceScore),
+    globalScore: normalizeScore(globalScore)
+  };
+}
+
 export async function POST(req: NextRequest) {
   console.log('API route hit');
   
@@ -56,7 +77,8 @@ export async function POST(req: NextRequest) {
       pitchDeckContent = await summarizePitchDeck(pitchDeckContent);
     }
 
-    const prompt = `
+    // First OpenAI API call
+    const initialPrompt = `
       Analyze this startup idea very briefly:
       
       Idea: ${truncateContent(query, 200)}
@@ -123,81 +145,73 @@ export async function POST(req: NextRequest) {
       Keep all responses extremely brief.
     `;
 
-    const truncatedPrompt = truncateContent(prompt, MAX_CONTENT_LENGTH);
-
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: truncatedPrompt }],
+    const initialCompletion = await openai.chat.completions.create({
+      messages: [{ role: "user", content: initialPrompt }],
       model: "gpt-3.5-turbo",
     });
 
-    const response = completion.choices[0].message.content;
-    console.log('Raw OpenAI API Response:', response);
+    const initialResponse = initialCompletion.choices[0].message.content;
+    console.log('Raw OpenAI API Response:', initialResponse);
 
-    if (!response) {
+    if (!initialResponse) {
       throw new Error('No response from OpenAI API');
     }
 
-    const parsedResponse = JSON.parse(response);
+    const parsedResponse = JSON.parse(initialResponse);
     console.log('Parsed OpenAI Response:', parsedResponse);
 
-    parsedResponse.pitchDeckProcessed = !!pitchDeckContent;
+    // Calculate scores
+    const scores = calculateScores(parsedResponse);
 
-    // Error handling for missing fields
-    if (!parsedResponse.dueDiligenceTech || !parsedResponse.dueDiligenceGTM || !parsedResponse.investmentMemoScores) {
-      console.error('Missing fields in OpenAI response:', parsedResponse);
-      throw new Error('Incomplete response from OpenAI API');
-    }
+    // Second OpenAI API call for industry averages
+    const industryAveragesPrompt = `
+      Based on the following startup idea analysis, provide industry averages for key metrics:
 
-    console.log('Due Diligence Tech:', parsedResponse.dueDiligenceTech);
-    console.log('Due Diligence GTM:', parsedResponse.dueDiligenceGTM);
-    console.log('Investment Memo Scores:', parsedResponse.investmentMemoScores);
+      ${JSON.stringify(parsedResponse, null, 2)}
 
-    // Calculate scores (already in percentage)
-    parsedResponse.techScore = parsedResponse.dueDiligenceTech.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3;
-    parsedResponse.gtmScore = parsedResponse.dueDiligenceGTM.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3;
-    parsedResponse.confidenceScore = Object.values(parsedResponse.investmentMemoScores).reduce((sum: number, score: unknown) => {
-      if (typeof score === 'number') {
-        return sum + score;
+      Please provide industry averages for:
+      1. Average funding raised at this stage
+      2. Average time to market
+      3. Average customer acquisition cost
+      4. Average lifetime value of a customer
+      5. Average burn rate
+      6. Average revenue growth rate
+
+      Respond in JSON format:
+      {
+        "averageFunding": "Amount in USD",
+        "averageTimeToMarket": "Time in months",
+        "averageCAC": "Amount in USD",
+        "averageLTV": "Amount in USD",
+        "averageBurnRate": "Amount in USD per month",
+        "averageRevenueGrowth": "Percentage per year"
       }
-      return sum;
-    }, 0) / 6;
+    `;
 
-    console.log('Calculated Scores:', {
-      techScore: parsedResponse.techScore,
-      gtmScore: parsedResponse.gtmScore,
-      confidenceScore: parsedResponse.confidenceScore
+    const industryAveragesCompletion = await openai.chat.completions.create({
+      messages: [{ role: "user", content: industryAveragesPrompt }],
+      model: "gpt-3.5-turbo",
     });
 
-    // Define weights based on startup stage and custom weights
-    let weights: Weights = {
-      tech: 0.33,
-      gtm: 0.33,
-      investmentMemo: 0.34
-    };
+    const industryAveragesResponse = industryAveragesCompletion.choices[0].message.content;
+    console.log('Industry Averages Response:', industryAveragesResponse);
 
-    if (startupStage === 'early') {
-      weights = { tech: 0.4, gtm: 0.3, investmentMemo: 0.3 };
-    } else if (startupStage === 'growth') {
-      weights = { tech: 0.3, gtm: 0.4, investmentMemo: 0.3 };
-    } else if (startupStage === 'late') {
-      weights = { tech: 0.2, gtm: 0.3, investmentMemo: 0.5 };
+    if (!industryAveragesResponse) {
+      throw new Error('No response from OpenAI API for industry averages');
     }
 
-    // Apply custom weights if provided
-    weights = { ...weights, ...customWeights };
+    const industryAverages = JSON.parse(industryAveragesResponse);
 
-    // Calculate weighted global score
-    parsedResponse.globalScore = calculateWeightedScore(
-      [parsedResponse.techScore, parsedResponse.gtmScore, parsedResponse.confidenceScore],
-      [weights.tech, weights.gtm, weights.investmentMemo]
-    );
+    // Combine the initial analysis with industry averages and calculated scores
+    const combinedResponse = {
+      ...parsedResponse,
+      industryAverages,
+      ...scores
+    };
 
-    // Add weights to the response
-    parsedResponse.weights = weights;
+    console.log('Final Response:', combinedResponse);
 
-    console.log('Final Response:', parsedResponse);
-
-    return NextResponse.json(parsedResponse);
+    return NextResponse.json(combinedResponse);
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json({ error: 'An error occurred while processing your request.' }, { status: 500 });
