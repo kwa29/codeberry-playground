@@ -25,7 +25,7 @@ async function summarizePitchDeck(content: string): Promise<string> {
 }
 
 function normalizeScore(score: number): number {
-  return Math.min(Math.max(score, 0), 10);
+  return Math.min(Math.max(score, 0), 100); // Ensure score is between 0% and 100%
 }
 
 interface Weights {
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const query = formData.get('query') as string;
-    const targetMarket = formData.get('targetMarket') as string;
     const pitchDeck = formData.get('pitchDeck') as File | null;
     const startupStage = formData.get('startupStage') as string || 'early';
     const customWeights = JSON.parse(formData.get('customWeights') as string || '{}') as Partial<Weights>;
@@ -61,7 +60,6 @@ export async function POST(req: NextRequest) {
       Analyze this startup idea very briefly:
       
       Idea: ${truncateContent(query, 200)}
-      Target Market: ${truncateContent(targetMarket, 50)}
       ${pitchDeckContent ? `Pitch Deck: ${pitchDeckContent}` : ''}
       Startup Stage: ${startupStage}
 
@@ -74,9 +72,9 @@ export async function POST(req: NextRequest) {
       6. 2 market demand indicators
       7. 2 relevant frameworks
       8. Investment memo (summary, market opportunity, business model, competitive advantage, financial projections, funding requirements)
-      9. 3 technical due diligence points with scores (0-10)
-      10. 3 go-to-market due diligence points with scores (0-10)
-      11. 6 investment memo quality scores (0-10) for each section of the investment memo
+      9. 3 technical due diligence points with scores (0-100%)
+      10. 3 go-to-market due diligence points with scores (0-100%)
+      11. 6 investment memo quality scores (0-100%) for each section of the investment memo
 
       Use the pitch deck information (if available) to inform your analysis, especially for the due diligence points and scores.
 
@@ -133,31 +131,42 @@ export async function POST(req: NextRequest) {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('OpenAI API Response:', response);
+    console.log('Raw OpenAI API Response:', response);
 
     if (!response) {
       throw new Error('No response from OpenAI API');
     }
 
     const parsedResponse = JSON.parse(response);
+    console.log('Parsed OpenAI Response:', parsedResponse);
+
     parsedResponse.pitchDeckProcessed = !!pitchDeckContent;
 
     // Error handling for missing fields
     if (!parsedResponse.dueDiligenceTech || !parsedResponse.dueDiligenceGTM || !parsedResponse.investmentMemoScores) {
+      console.error('Missing fields in OpenAI response:', parsedResponse);
       throw new Error('Incomplete response from OpenAI API');
     }
 
-    // Calculate and normalize scores
-    parsedResponse.techScore = normalizeScore(parsedResponse.dueDiligenceTech.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3);
-    parsedResponse.gtmScore = normalizeScore(parsedResponse.dueDiligenceGTM.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3);
-    parsedResponse.confidenceScore = normalizeScore(
-      Object.values(parsedResponse.investmentMemoScores).reduce((sum: number, score: unknown) => {
-        if (typeof score === 'number') {
-          return sum + score;
-        }
-        return sum;
-      }, 0) / 6
-    );
+    console.log('Due Diligence Tech:', parsedResponse.dueDiligenceTech);
+    console.log('Due Diligence GTM:', parsedResponse.dueDiligenceGTM);
+    console.log('Investment Memo Scores:', parsedResponse.investmentMemoScores);
+
+    // Calculate scores (already in percentage)
+    parsedResponse.techScore = parsedResponse.dueDiligenceTech.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3;
+    parsedResponse.gtmScore = parsedResponse.dueDiligenceGTM.reduce((sum: number, item: { score: number }) => sum + item.score, 0) / 3;
+    parsedResponse.confidenceScore = Object.values(parsedResponse.investmentMemoScores).reduce((sum: number, score: unknown) => {
+      if (typeof score === 'number') {
+        return sum + score;
+      }
+      return sum;
+    }, 0) / 6;
+
+    console.log('Calculated Scores:', {
+      techScore: parsedResponse.techScore,
+      gtmScore: parsedResponse.gtmScore,
+      confidenceScore: parsedResponse.confidenceScore
+    });
 
     // Define weights based on startup stage and custom weights
     let weights: Weights = {
@@ -178,10 +187,15 @@ export async function POST(req: NextRequest) {
     weights = { ...weights, ...customWeights };
 
     // Calculate weighted global score
-    parsedResponse.globalScore = normalizeScore(calculateWeightedScore(
+    parsedResponse.globalScore = calculateWeightedScore(
       [parsedResponse.techScore, parsedResponse.gtmScore, parsedResponse.confidenceScore],
       [weights.tech, weights.gtm, weights.investmentMemo]
-    ));
+    );
+
+    // Add weights to the response
+    parsedResponse.weights = weights;
+
+    console.log('Final Response:', parsedResponse);
 
     return NextResponse.json(parsedResponse);
   } catch (error) {
